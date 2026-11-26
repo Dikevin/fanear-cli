@@ -42,9 +42,12 @@ homebrew_casks:
     repository:
       owner: Dikevin
       name: homebrew-tap
-      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    # Until the tap token secret exists the cask is generated but not pushed.
-    skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}false{{ else }}true{{ end }}'
+      # Pushed over SSH with a write deploy key that only covers the tap.
+      git:
+        url: git@github.com:Dikevin/homebrew-tap.git
+        private_key: "{{ .Env.HOMEBREW_TAP_DEPLOY_KEY }}"
+    # Without the key (forks, local runs) the cask is generated but not pushed.
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_DEPLOY_KEY" }}false{{ else }}true{{ end }}'
     hooks:
       post:
         # The binary is not notarized; let it run without a Gatekeeper prompt.
