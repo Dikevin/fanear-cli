@@ -54,12 +54,12 @@ func Locate(o Options) (Root, error) {
 	if cfg, err := readConfig(cfgPath); err == nil && cfg.Root != "" {
 		return fromPath(o, cfg.Root, "配置文件 "+cfgPath)
 	}
-	cands := Discover(o)
-	if len(cands) == 0 {
+	var first *Candidate
+	discover(o, func(c Candidate) bool { first = &c; return false })
+	if first == nil {
 		return Root{}, fmt.Errorf("%w：自动查找的位置里都没有。用 --root、环境变量 FANEAR_ROOT 或 `fanear where --set <目录>` 指定饭耳的保存位置", ErrNotFound)
 	}
-	c := cands[0]
-	return Root{Records: c.Records, How: "自动发现：" + c.Label, Restore: FindRestore(c.Records)}, nil
+	return Root{Records: first.Records, How: "自动发现：" + first.Label, Restore: FindRestore(first.Records)}, nil
 }
 
 func fromPath(o Options, p, how string) (Root, error) {
@@ -94,35 +94,52 @@ func Resolve(p string) (string, error) {
 // Discover lists records folders in the places FanEar data usually syncs to
 // on this machine, most likely first.
 func Discover(o Options) []Candidate {
+	var out []Candidate
+	discover(o, func(c Candidate) bool { out = append(out, c); return true })
+	return out
+}
+
+// discover visits candidates in priority order until visit returns false.
+// Each place is only listed when the ones before it did not stop the walk,
+// so the common case (FanEar's own iCloud folder) touches nothing else.
+func discover(o Options, visit func(Candidate) bool) {
 	if o.GOOS != "darwin" {
-		return nil
+		return
 	}
 	h := o.Home
-	var out []Candidate
 	seen := map[string]bool{}
-	add := func(label string, dirs []string) {
-		for _, d := range dirs {
-			if !seen[d] {
-				seen[d] = true
-				out = append(out, Candidate{Label: label, Records: d})
+	stopped := false
+	try := func(label string, find func() []string) {
+		if stopped {
+			return
+		}
+		for _, d := range find() {
+			if seen[d] {
+				continue
+			}
+			seen[d] = true
+			if !visit(Candidate{Label: label, Records: d}) {
+				stopped = true
+				return
 			}
 		}
 	}
 	mobile := filepath.Join(h, "Library", "Mobile Documents")
-	add("饭耳的 iCloud 目录", findRecords(filepath.Join(mobile, "iCloud~dev~fandao~fanear", "Documents"), 1, 50))
-	add("iCloud 云盘", findRecords(filepath.Join(mobile, "com~apple~CloudDocs"), 3, 1500))
+	try("饭耳的 iCloud 目录", func() []string {
+		return findRecords(filepath.Join(mobile, "iCloud~dev~fandao~fanear", "Documents"), 1, 50)
+	})
+	try("iCloud 云盘", func() []string { return findRecords(filepath.Join(mobile, "com~apple~CloudDocs"), 3, 1500) })
 	for _, d := range subdirs(filepath.Join(h, "Library", "CloudStorage")) {
-		add(cloudLabel(filepath.Base(d)), findRecords(d, 4, 1500))
+		try(cloudLabel(filepath.Base(d)), func() []string { return findRecords(d, 4, 1500) })
 	}
-	add("Dropbox", findRecords(filepath.Join(h, "Dropbox"), 3, 1500))
+	try("Dropbox", func() []string { return findRecords(filepath.Join(h, "Dropbox"), 3, 1500) })
 	for _, d := range subdirs("/Volumes") {
 		switch filepath.Base(d) {
 		case "Macintosh HD", "Recovery", "Preboot", "VM", "Data", "Update":
 			continue
 		}
-		add("挂载的磁盘或 NAS（"+filepath.Base(d)+"）", findRecords(d, 3, 1500))
+		try("挂载的磁盘或 NAS（"+filepath.Base(d)+"）", func() []string { return findRecords(d, 3, 1500) })
 	}
-	return out
 }
 
 func cloudLabel(name string) string {
