@@ -1,0 +1,54 @@
+# Release build: `git tag vX.Y.Z && git push origin vX.Y.Z` runs this in
+# .github/workflows/release.yml. Try it locally with
+# `goreleaser release --snapshot --clean`.
+version: 2
+project_name: fanear
+
+builds:
+  - main: ./cmd/fanear
+    binary: fanear
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/Dikevin/fanear-cli/internal/cli.Version={{ .Tag }}
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+
+homebrew_casks:
+  - name: fanear
+    binaries: [fanear]
+    directory: Casks
+    homepage: https://github.com/Dikevin/fanear-cli
+    description: Read-only CLI and agent skill for FanEar (饭耳) daily records
+    repository:
+      owner: Dikevin
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    # Until the tap token secret exists the cask is generated but not pushed.
+    skip_upload: '{{ if index .Env "HOMEBREW_TAP_TOKEN" }}false{{ else }}true{{ end }}'
+    hooks:
+      post:
+        # The binary is not notarized; let it run without a Gatekeeper prompt.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/fanear"]
+          end

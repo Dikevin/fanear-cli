@@ -101,9 +101,13 @@ func readInstalled(dir string) installedSkill {
 		s.Ours, s.Version = true, m.Version
 		return s
 	}
-	s.Ours = strings.Contains(string(b), "\nname: fanear\n")
+	s.Ours = skillNameRe.Match(b)
 	return s
 }
+
+// skillNameRe matches the frontmatter line of fanear's SKILL.md, whatever
+// line endings the copy ended up with.
+var skillNameRe = regexp.MustCompile(`(?m)^name:\s*fanear\s*$`)
 
 // writeSkill writes this version's SKILL.md and its marker into dir.
 func writeSkill(e Env, dir string) error {

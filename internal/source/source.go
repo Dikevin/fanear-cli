@@ -101,12 +101,8 @@ func Discover(o Options) []Candidate {
 
 // discover visits candidates in priority order until visit returns false.
 // Each place is only listed when the ones before it did not stop the walk,
-// so the common case (FanEar's own iCloud folder) touches nothing else.
+// so the common case (FanEar's own folder) touches nothing else.
 func discover(o Options, visit func(Candidate) bool) {
-	if o.GOOS != "darwin" {
-		return
-	}
-	h := o.Home
 	seen := map[string]bool{}
 	stopped := false
 	try := func(label string, find func() []string) {
@@ -124,6 +120,17 @@ func discover(o Options, visit func(Candidate) bool) {
 			}
 		}
 	}
+	switch o.GOOS {
+	case "darwin":
+		discoverMac(o.Home, try)
+	case "windows":
+		discoverWindows(o.Home, try)
+	}
+}
+
+type tryFunc func(label string, find func() []string)
+
+func discoverMac(h string, try tryFunc) {
 	mobile := filepath.Join(h, "Library", "Mobile Documents")
 	try("饭耳的 iCloud 目录", func() []string {
 		return findRecords(filepath.Join(mobile, "iCloud~dev~fandao~fanear", "Documents"), 1, 50)
@@ -139,6 +146,34 @@ func discover(o Options, visit func(Candidate) bool) {
 			continue
 		}
 		try("挂载的磁盘或 NAS（"+filepath.Base(d)+"）", func() []string { return findRecords(d, 3, 1500) })
+	}
+}
+
+// windowsDrives lists drive roots other than C:, where Google Drive for
+// desktop, mapped NAS shares and USB disks show up. Tests replace it.
+var windowsDrives = func() []string {
+	var out []string
+	for l := 'D'; l <= 'Z'; l++ {
+		root := string(l) + `:\`
+		if st, err := os.Stat(root); err == nil && st.IsDir() {
+			out = append(out, root)
+		}
+	}
+	return out
+}
+
+func discoverWindows(h string, try tryFunc) {
+	// 饭耳 Windows 版 saves what a paired phone sends into %USERPROFILE%\饭耳.
+	try("饭耳 Windows 版（配对的电脑）", func() []string { return findRecords(filepath.Join(h, "饭耳"), 2, 200) })
+	try("iCloud for Windows", func() []string { return findRecords(filepath.Join(h, "iCloudDrive"), 3, 1500) })
+	for _, d := range subdirs(h) {
+		if strings.HasPrefix(filepath.Base(d), "OneDrive") {
+			try("OneDrive", func() []string { return findRecords(d, 3, 1500) })
+		}
+	}
+	try("Dropbox", func() []string { return findRecords(filepath.Join(h, "Dropbox"), 3, 1500) })
+	for _, d := range windowsDrives() {
+		try("其他磁盘（"+d+"，如 Google Drive 桌面版、映射的 NAS）", func() []string { return findRecords(d, 4, 1500) })
 	}
 }
 

@@ -9,7 +9,18 @@ import (
 	"github.com/Dikevin/fanear-cli/internal/data"
 )
 
-const upgradeCmd = "GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest"
+const goInstall = "GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@"
+
+// upgradeCmd is how this copy of fanear gets a newer release: through
+// Homebrew when it came from the tap, otherwise go install.
+func upgradeCmd(version string) string {
+	if exe, err := os.Executable(); err == nil {
+		if real, err := filepath.EvalSymlinks(exe); err == nil && strings.Contains(filepath.ToSlash(real), "/Caskroom/") {
+			return "brew upgrade fanear"
+		}
+	}
+	return goInstall + version
+}
 
 // check is one line of `fanear doctor`.
 type check struct {
@@ -92,9 +103,9 @@ func (d *doctor) records(dir string) {
 		}
 		var rec data.DayRecord
 		if err := data.ReadJSON(path, &rec); err != nil {
-			d.add("format", "格式", "fail", err.Error(), "升级 fanear："+upgradeCmd)
+			d.add("format", "格式", "fail", err.Error(), "升级 fanear："+upgradeCmd("latest"))
 		} else if rec.SchemaVersion != 2 {
-			d.add("format", "格式", "warn", fmt.Sprintf("%s 的格式版本是 %d，fanear 按 2 读", filepath.Base(path), rec.SchemaVersion), "升级 fanear："+upgradeCmd)
+			d.add("format", "格式", "warn", fmt.Sprintf("%s 的格式版本是 %d，fanear 按 2 读", filepath.Base(path), rec.SchemaVersion), "升级 fanear："+upgradeCmd("latest"))
 		} else {
 			d.add("format", "格式", "ok", filepath.Base(path)+" 能读", "")
 		}
@@ -120,7 +131,7 @@ func (d *doctor) skills() {
 		case isRelease(cur) && olderThan(s.Version, cur):
 			d.add("skill", "skill", "fail", fmt.Sprintf("%s 是 %s，比程序 %s 旧，没能自动更新", at, s.Version, cur), "运行 fanear skill install")
 		case isRelease(cur) && olderThan(cur, s.Version):
-			d.add("skill", "skill", "warn", fmt.Sprintf("%s 是 %s，比程序 %s 新", at, s.Version, cur), "升级 fanear："+strings.TrimSuffix(upgradeCmd, "latest")+s.Version)
+			d.add("skill", "skill", "warn", fmt.Sprintf("%s 是 %s，比程序 %s 新", at, s.Version, cur), "升级 fanear："+upgradeCmd(s.Version))
 		default:
 			d.add("skill", "skill", "info", fmt.Sprintf("%s 是 %s，程序是 %s", at, s.Version, cur), "想让两边一致就运行 fanear skill install")
 		}

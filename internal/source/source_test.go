@@ -89,11 +89,11 @@ func TestFindRestore(t *testing.T) {
 func TestConfigPath(t *testing.T) {
 	env := map[string]string{"XDG_CONFIG_HOME": "/x"}
 	o := Options{Getenv: func(k string) string { return env[k] }, Home: "/h"}
-	if got := ConfigPath(o); got != "/x/fanear/config.json" {
+	if got := ConfigPath(o); got != filepath.FromSlash("/x/fanear/config.json") {
 		t.Fatal(got)
 	}
 	env = nil
-	if got := ConfigPath(o); got != "/h/.config/fanear/config.json" {
+	if got := ConfigPath(o); got != filepath.FromSlash("/h/.config/fanear/config.json") {
 		t.Fatal(got)
 	}
 }
@@ -129,5 +129,32 @@ func TestConfigKeepsRootAndSkills(t *testing.T) {
 	}
 	if r, err := Locate(o); err != nil || r.Records != other {
 		t.Fatalf("RecordSkillDir dropped the root: %+v, %v", r, err)
+	}
+}
+
+func TestDiscoverWindows(t *testing.T) {
+	home := t.TempDir()
+	drive := t.TempDir()
+	old := windowsDrives
+	windowsDrives = func() []string { return []string{drive} }
+	t.Cleanup(func() { windowsDrives = old })
+
+	gdrive := filepath.Join(drive, "My Drive", "饭耳", "记录")
+	mkday(t, gdrive)
+	o := Options{Getenv: func(string) string { return "" }, Home: home, GOOS: "windows"}
+	if c := Discover(o); len(c) != 1 || c[0].Records != gdrive {
+		t.Fatalf("Discover = %+v", c)
+	}
+	// The paired-computer folder of 饭耳 Windows 版 comes first.
+	paired := filepath.Join(home, "饭耳", "记录")
+	mkday(t, paired)
+	r, err := Locate(o)
+	if err != nil || r.Records != paired || r.How != "自动发现：饭耳 Windows 版（配对的电脑）" {
+		t.Fatalf("Locate = %+v, %v", r, err)
+	}
+	onedrive := filepath.Join(home, "OneDrive - Example", "Apps", "饭耳", "记录")
+	mkday(t, onedrive)
+	if c := Discover(o); len(c) != 3 || c[1].Records != onedrive || c[2].Records != gdrive {
+		t.Fatalf("Discover order = %+v", c)
 	}
 }

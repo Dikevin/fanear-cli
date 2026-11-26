@@ -1,14 +1,29 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Dikevin/fanear-cli/skills"
 )
+
+// native turns a /-separated expectation into this system's path form.
+func native(s string) string { return filepath.FromSlash(s) }
+
+// needsUnix skips tests that create symlinks or rely on Unix permissions,
+// which Windows runners do not give ordinary processes.
+func needsUnix(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("needs symlinks and Unix permissions")
+	}
+}
 
 func setVersion(t *testing.T, v string) {
 	t.Helper()
@@ -47,9 +62,9 @@ func markerVersion(t *testing.T, dir string) string {
 
 func TestSkillRender(t *testing.T) {
 	s := skills.Fanear("v0.2.0")
-	pre, after, _ := strings.Cut(s, "## 选命令")
-	if !strings.Contains(pre, "cmd/fanear@v0.2.0") || !strings.Contains(after, "cmd/fanear@latest") || strings.Count(s, "@v0.2.0") != 1 {
-		t.Fatalf("only the 前提 install command should be pinned:\n%s", s)
+	pre, _, _ := strings.Cut(s, "## 选命令")
+	if !strings.Contains(pre, "cmd/fanear@v0.2.0") || strings.Count(s, "@v0.2.0") != 1 {
+		t.Fatalf("the 前提 install command should be pinned once:\n%s", s)
 	}
 	if !strings.Contains(skills.Fanear(""), "cmd/fanear@latest") {
 		t.Fatal("development builds should point at @latest")
@@ -88,7 +103,7 @@ func TestSkillSync(t *testing.T) {
 	r := runWith(t, nil, home, "days", "--root", sample)
 	must(t, r, "2026-11-24")
 	for _, want := range []string{
-		"fanear: 已把 ~/.agents/skills/fanear 的 skill 从 旧版 更新到 v0.2.0\n",
+		native("fanear: 已把 ~/.agents/skills/fanear 的 skill 从 旧版 更新到 v0.2.0\n"),
 		"的 skill 从 v0.1.5 更新到 v0.2.0\n",
 	} {
 		if !strings.Contains(r.stderr, want) {
@@ -132,7 +147,7 @@ func TestSkillSyncLeavesOthersAlone(t *testing.T) {
 
 	r := runWith(t, nil, home, "version")
 	must(t, r, "fanear v0.2.0")
-	if !strings.Contains(r.stderr, "~/.claude/skills/fanear 的 skill 从 v0.1.0 更新到 v0.2.0") || strings.Contains(r.stderr, ".agents") {
+	if !strings.Contains(r.stderr, native("~/.claude/skills/fanear 的 skill 从 v0.1.0 更新到 v0.2.0")) || strings.Contains(r.stderr, ".agents") {
 		t.Fatalf("stderr %q", r.stderr)
 	}
 	if readFile(t, filepath.Join(def, "SKILL.md")) != "---\nname: something-else\n---\n" {
@@ -141,6 +156,7 @@ func TestSkillSyncLeavesOthersAlone(t *testing.T) {
 }
 
 func TestSkillClaudeRelink(t *testing.T) {
+	needsUnix(t)
 	home := t.TempDir()
 	link := filepath.Join(home, ".claude", "skills", "fanear")
 	old := t.TempDir()
@@ -164,6 +180,7 @@ func TestSkillClaudeRelink(t *testing.T) {
 }
 
 func TestSkillSyncUnwritable(t *testing.T) {
+	needsUnix(t)
 	if os.Geteuid() == 0 {
 		t.Skip("root ignores permissions")
 	}
@@ -184,7 +201,40 @@ func TestSkillSyncUnwritable(t *testing.T) {
 
 	r := runWith(t, nil, home, "days", "--root", sample)
 	must(t, r, "2026-11-24")
-	if strings.Count(r.stderr, "\n") != 1 || !strings.Contains(r.stderr, "没能把 ~/.agents/skills/fanear 的 skill 从 v0.1.0 更新到 v0.2.0") {
+	if strings.Count(r.stderr, "\n") != 1 || !strings.Contains(r.stderr, native("没能把 ~/.agents/skills/fanear 的 skill 从 v0.1.0 更新到 v0.2.0")) {
 		t.Fatalf("want one stderr line, got %q", r.stderr)
+	}
+}
+
+func TestSkillClaudeCopyOnWindows(t *testing.T) {
+	setVersion(t, "v0.2.0")
+	home := t.TempDir()
+	var out, errb bytes.Buffer
+	e := Env{
+		Stdout: &out, Stderr: &errb, Home: home, GOOS: "windows",
+		Getenv: func(string) string { return "" },
+		Now:    func() time.Time { return time.Date(2026, 11, 26, 10, 0, 0, 0, time.UTC) },
+	}
+	if code := Run([]string{"skill", "install", "--claude"}, e); code != 0 {
+		t.Fatalf("exit %d: %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), "这个系统建不了链接，给 Claude Code 放了一份副本") {
+		t.Fatalf("output: %s", out.String())
+	}
+	claude := filepath.Join(home, ".claude", "skills", "fanear")
+	if fi, err := os.Lstat(claude); err != nil || fi.Mode()&os.ModeSymlink != 0 {
+		t.Fatalf("want a real folder at %s: %v", claude, err)
+	}
+	if v := markerVersion(t, claude); v != "v0.2.0" {
+		t.Fatalf("copy marker %q", v)
+	}
+	// The copy is kept current like any other installed copy.
+	writeFile(t, filepath.Join(claude, markerFile), `{"tool":"fanear","version":"v0.1.0"}`)
+	out.Reset()
+	if code := Run([]string{"doctor", "--root", sample}, e); code != 0 || !strings.Contains(errb.String(), "更新到 v0.2.0") {
+		t.Fatalf("exit %d, stderr %s", code, errb.String())
+	}
+	if !strings.Contains(out.String(), native("✓ Claude Code  ~/.claude/skills/fanear 是一份副本，会跟着程序版本更新")) {
+		t.Fatalf("doctor:\n%s", out.String())
 	}
 }
