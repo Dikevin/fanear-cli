@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "files": {
+    "index.md": "# 饭耳眼中的你\n\n- [你](me.md)：在装修房子。\n- [张三](people/p1.md)\n",
+    "me.md": "# 你\n<!-- page {\"kind\":\"me\",\"slug\":\"me\"} -->\n\n最近在比较装修报价。\n",
+    "people/p1.md": "# 张三\n<!-- page {\"kind\":\"person\",\"slug\":\"p1\"} -->\n\n装修顾问，等报价单。\n",
+    "people/p2.md": "# 张小三\n<!-- page {\"kind\":\"person\",\"slug\":\"p2\"} -->\n\n张三的同事。\n",
+    "topics/t1.md": "# 家居与装修\n<!-- page {\"kind\":\"topic\",\"slug\":\"t1\"} -->\n\n样板间在下周。\n",
+    "log.md": "# 整理记录\n",
+    "progress.json": "{}"
+  }
+}

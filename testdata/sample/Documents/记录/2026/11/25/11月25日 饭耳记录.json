@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "timeZone": "Asia/Shanghai",
+  "day": {
+    "date": "2026-11-25T00:00:00.000+08:00",
+    "conversations": [
+      {
+        "id": "CONV-3",
+        "title": "电话里说报价",
+        "summary": "",
+        "start": "2026-11-25T09:00:00.000+08:00",
+        "end": "2026-11-25T09:01:00.000+08:00",
+        "chunkIDs": [
+          "CHUNK-C"
+        ],
+        "sentences": [
+          {
+            "id": "S7",
+            "start": "2026-11-25T09:00:00.000+08:00",
+            "end": "2026-11-25T09:00:03.000+08:00",
+            "text": "报价单发你微信了。",
+            "speakerName": "我",
+            "isMe": true,
+            "chunkID": "CHUNK-C"
+          }
+        ]
+      }
+    ],
+    "records": [
+      {
+        "id": "todo-4",
+        "kind": "commitments",
+        "title": "回电话",
+        "text": "给王五回电话",
+        "at": "2026-11-25T09:00:30.000+08:00",
+        "commitment": {
+          "id": "C4",
+          "kind": "mine",
+          "summary": "给王五回电话",
+          "quote": "我晚点回你电话。",
+          "chunkID": "CHUNK-C",
+          "sourceRecordedAt": "2026-11-25T09:00:30.000+08:00",
+          "status": {
+            "kind": "pending"
+          }
+        },
+        "todoState": "waiting"
+      }
+    ]
+  }
+}

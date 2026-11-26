@@ -1,0 +1,16 @@
+[
+  {
+    "id": "F1",
+    "kind": "episode",
+    "title": "和张三聊装修",
+    "gist": "比较两家装修报价。",
+    "start": "2026-11-24T02:00:00Z",
+    "end": "2026-11-24T02:02:00Z",
+    "createdAt": "2026-11-24T02:02:00Z",
+    "autoMeeting": false,
+    "conversationIDs": [
+      "CONV-1"
+    ],
+    "sentences": []
+  }
+]

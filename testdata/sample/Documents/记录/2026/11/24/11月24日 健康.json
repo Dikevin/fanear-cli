@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-24",
+  "timeZone": "Asia/Shanghai",
+  "series": [
+    {
+      "type": "HKQuantityTypeIdentifierHeartRate",
+      "name": "心率",
+      "kind": "quantity",
+      "aggregation": "discrete",
+      "unit": "count/min",
+      "samples": [
+        {
+          "start": "2026-11-24T10:00:00.000+08:00",
+          "end": "2026-11-24T10:00:00.000+08:00",
+          "value": 60,
+          "source": "Apple Watch"
+        },
+        {
+          "start": "2026-11-24T11:00:00.000+08:00",
+          "end": "2026-11-24T11:00:00.000+08:00",
+          "value": 90,
+          "source": "Apple Watch"
+        }
+      ]
+    },
+    {
+      "type": "HKQuantityTypeIdentifierOxygenSaturation",
+      "name": "血氧",
+      "kind": "quantity",
+      "aggregation": "discrete",
+      "unit": "%",
+      "samples": [
+        {
+          "start": "2026-11-24T03:00:00.000+08:00",
+          "end": "2026-11-24T03:00:00.000+08:00",
+          "value": 0.97,
+          "source": "Apple Watch"
+        }
+      ]
+    },
+    {
+      "type": "HKQuantityTypeIdentifierStepCount",
+      "name": "步数",
+      "kind": "quantity",
+      "aggregation": "cumulative",
+      "unit": "count",
+      "samples": [
+        {
+          "start": "2026-11-24T08:00:00.000+08:00",
+          "end": "2026-11-24T09:00:00.000+08:00",
+          "value": 1200,
+          "source": "iPhone"
+        },
+        {
+          "start": "2026-11-24T18:00:00.000+08:00",
+          "end": "2026-11-24T19:00:00.000+08:00",
+          "value": 800,
+          "source": "iPhone"
+        }
+      ]
+    },
+    {
+      "type": "HKCategoryTypeIdentifierSleepAnalysis",
+      "name": "睡眠",
+      "kind": "category",
+      "samples": [
+        {
+          "start": "2026-11-24T00:30:00.000+08:00",
+          "end": "2026-11-24T02:00:00.000+08:00",
+          "value": 3,
+          "label": "核心睡眠",
+          "source": "Apple Watch"
+        },
+        {
+          "start": "2026-11-24T02:00:00.000+08:00",
+          "end": "2026-11-24T02:45:00.000+08:00",
+          "value": 4,
+          "label": "深睡",
+          "source": "Apple Watch"
+        }
+      ]
+    },
+    {
+      "type": "HKCategoryTypeIdentifierAppleStandHour",
+      "name": "站立小时",
+      "kind": "category",
+      "samples": [
+        {
+          "start": "2026-11-24T10:00:00.000+08:00",
+          "end": "2026-11-24T11:00:00.000+08:00",
+          "value": 0,
+          "source": "Apple Watch"
+        }
+      ]
+    }
+  ],
+  "alerts": [],
+  "moods": [],
+  "electrocardiograms": [],
+  "profile": {
+    "sex": "other"
+  },
+  "unreadTypes": []
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-24",
+  "timeZone": "Asia/Shanghai",
+  "digest": {
+    "overview": "比较装修报价。",
+    "things": []
+  },
+  "highlights": {
+    "overview": "",
+    "points": []
+  },
+  "periods": [],
+  "cards": [],
+  "withheld": {
+    "sentences": 0,
+    "cards": 0
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "schema_version": 2,
+  "timeZone": "Asia/Shanghai",
+  "day": {
+    "date": "2026-11-24T00:00:00.000+08:00",
+    "conversations": [
+      {
+        "id": "CONV-1",
+        "title": "和张三聊装修",
+        "summary": "比较两家装修报价。",
+        "start": "2026-11-24T10:00:00.000+08:00",
+        "end": "2026-11-24T10:02:00.000+08:00",
+        "chunkIDs": [
+          "CHUNK-A"
+        ],
+        "sentences": [
+          {
+            "id": "S1",
+            "start": "2026-11-24T10:00:05.000+08:00",
+            "end": "2026-11-24T10:00:08.000+08:00",
+            "text": "两家装修的报价我都拿到了。",
+            "speakerName": "我",
+            "isMe": true,
+            "chunkID": "CHUNK-A"
+          },
+          {
+            "id": "S2",
+            "start": "2026-11-24T10:00:10.000+08:00",
+            "end": "2026-11-24T10:00:14.000+08:00",
+            "text": "那你明天把报价单发给我。",
+            "speakerName": "张三",
+            "isMe": false,
+            "chunkID": "CHUNK-A"
+          },
+          {
+            "id": "S3",
+            "start": "2026-11-24T10:00:20.000+08:00",
+            "end": "2026-11-24T10:00:22.000+08:00",
+            "text": "行，我明天发你。",
+            "speakerName": "我",
+            "isMe": true,
+            "chunkID": "CHUNK-A",
+            "highlighted": true
+          },
+          {
+            "id": "S4",
+            "start": "2026-11-24T10:00:30.000+08:00",
+            "end": "2026-11-24T10:00:31.000+08:00",
+            "text": "嗡嗡嗡",
+            "speakerName": "说话人 1",
+            "isMe": false,
+            "chunkID": "CHUNK-A",
+            "noise": true
+          },
+          {
+            "id": "S5",
+            "start": "2026-11-24T10:01:00.000+08:00",
+            "end": "2026-11-24T10:01:03.000+08:00",
+            "text": "我下周去看样板间。",
+            "speakerName": "李四（推测）",
+            "isMe": false,
+            "chunkID": "CHUNK-A",
+            "speakerInferred": true
+          }
+        ]
+      },
+      {
+        "id": "CONV-2",
+        "title": "午饭",
+        "summary": "",
+        "start": "2026-11-24T12:30:00.000+08:00",
+        "end": "2026-11-24T12:31:00.000+08:00",
+        "chunkIDs": [
+          "CHUNK-B"
+        ],
+        "sentences": [
+          {
+            "id": "S6",
+            "start": "2026-11-24T12:30:10.000+08:00",
+            "end": "2026-11-24T12:30:12.000+08:00",
+            "text": "中午吃面吧。",
+            "speakerName": "我",
+            "isMe": true,
+            "chunkID": "CHUNK-B"
+          }
+        ]
+      }
+    ],
+    "records": [
+      {
+        "id": "analysis-CHUNK-A",
+        "kind": "chunkSummaries",
+        "title": "装修报价",
+        "text": "比较报价。",
+        "at": "2026-11-24T10:00:00.000+08:00"
+      },
+      {
+        "id": "todo-1",
+        "kind": "commitments",
+        "title": "发报价单",
+        "text": "把报价单发给张三",
+        "at": "2026-11-24T10:00:20.000+08:00",
+        "commitment": {
+          "id": "C1",
+          "kind": "mine",
+          "summary": "把装修报价单发给张三",
+          "quote": "行，我明天发你。",
+          "saidTo": "someone_else",
+          "counterparty": "张三",
+          "dueText": "明天",
+          "dueDate": "2026-11-25T00:00:00.000+08:00",
+          "chunkID": "CHUNK-A",
+          "sourceRecordedAt": "2026-11-24T10:00:20.000+08:00",
+          "status": {
+            "kind": "accepted"
+          }
+        },
+        "todoState": "done",
+        "todoDoneBasis": {
+          "by": "said",
+          "source": "heard",
+          "at": "2026-11-25T09:00:00.000+08:00",
+          "quote": "报价单发你微信了。",
+          "quoteAt": "2026-11-25T09:00:00.000+08:00"
+        },
+        "todoGrouping": {
+          "matter": "装修",
+          "status": "等张三回复"
+        }
+      },
+      {
+        "id": "todo-2",
+        "kind": "commitments",
+        "title": "看样板间",
+        "text": "李四下周看样板间",
+        "at": "2026-11-24T10:01:00.000+08:00",
+        "commitment": {
+          "id": "C2",
+          "kind": "theirs",
+          "summary": "下周去看样板间",
+          "quote": "我下周去看样板间。",
+          "dueText": "下周",
+          "chunkID": "CHUNK-A",
+          "sourceRecordedAt": "2026-11-24T10:01:00.000+08:00",
+          "status": {
+            "kind": "pending"
+          }
+        },
+        "todoState": "open"
+      },
+      {
+        "id": "todo-3",
+        "kind": "commitments",
+        "title": "吃面",
+        "text": "中午吃面",
+        "at": "2026-11-24T12:30:10.000+08:00",
+        "commitment": {
+          "id": "C3",
+          "kind": "mine",
+          "summary": "中午吃面",
+          "quote": "中午吃面吧。",
+          "chunkID": "CHUNK-B",
+          "sourceRecordedAt": "2026-11-24T12:30:10.000+08:00",
+          "status": {
+            "kind": "pending"
+          }
+        },
+        "todoState": "hidden"
+      }
+    ]
+  }
+}
