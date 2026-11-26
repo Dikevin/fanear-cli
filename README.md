@@ -4,21 +4,27 @@
 
 A read-only CLI (and agent skill) for the daily records the FanEar Apple Watch recorder writes to its save location.
 
-> 非官方工具，和饭耳开发者无关。只读本机文件，不联网，不改、不删、不挪任何文件。
+> 非官方工具，和饭耳开发者无关。只读饭耳的数据，不联网，不改、不删、不挪数据目录里的任何文件；只会写自己的配置和装好的 skill。
 
 ## 安装
 
 需要 Go 1.23 以上：
 
 ```bash
-go install github.com/Dikevin/fanear-cli/cmd/fanear@latest
+GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest
 ```
+
+`GOPROXY=direct` 直接从 GitHub 取最新的 tag；走公司或镜像代理时，`@latest` 可能拿到代理缓存的旧版本。
 
 给 agent 装 skill（写到 `~/.agents/skills/fanear`，Codex 和 Antigravity 读这里；`--claude` 再给 Claude Code 建个链接）：
 
 ```bash
 fanear skill install --claude
 ```
+
+装好的 skill 旁边有个 `.installed.json`，记着是哪个版本写的。以后升级 fanear，第一次运行任何命令时会把旧的 skill 换成新版，并在 stderr 说一声；`--dir` 装到别处的也会记下来一起更新。从源码直接构建的开发版不会动已装的 skill。
+
+装完或者出问题时跑一下 `fanear doctor`：它检查数据目录、最近的记录、记录格式、skill 版本和 Claude Code 的链接，有问题时退出码是 1，并给出修法。
 
 ## 数据在哪
 
@@ -52,8 +58,12 @@ fanear skill install --claude
 | `fanear memory [名字]` | 小耳的记忆：关于你、人物和话题档案 |
 | `fanear favorites` | 收藏的对话 |
 | `fanear skill [install]` | 打印或安装 agent skill |
+| `fanear doctor` | 检查数据目录、记录、skill 装得对不对 |
+| `fanear version` | 版本 |
 
 所有命令都能加 `--json`。日期可以写 今天、昨天、前天、`2026-11-24`、`11-24`、`11月24日`。每个命令的参数见 `fanear <命令> -h`。
+
+退出码：0 成功，1 运行出错（比如找不到数据），2 命令或参数写错。写错时 fanear 会提示最接近的写法，比如把 todos 打成 todo，会问“你是不是想输入 todos？”；加了 `--json` 时，错误以 `{"ok":false,"error":"…","suggestion":"…"}` 写到 stderr。
 
 ## 不做的事
 

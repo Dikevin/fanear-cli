@@ -309,7 +309,8 @@ func pickDevice(dir string) string {
 }
 
 type config struct {
-	Root string `json:"root"`
+	Root   string   `json:"root,omitempty"`
+	Skills []string `json:"skills,omitempty"` // skill folders `fanear skill install` wrote
 }
 
 // ConfigPath is where `fanear where --set` remembers the data folder.
@@ -344,14 +345,41 @@ func SaveRoot(o Options, p string) (records, cfgPath string, err error) {
 		return "", "", err
 	}
 	cfgPath = ConfigPath(o)
+	err = updateConfig(cfgPath, func(c *config) { c.Root = abs })
+	return records, cfgPath, err
+}
+
+// updateConfig rewrites the config file, keeping fields edit leaves alone.
+func updateConfig(cfgPath string, edit func(*config)) error {
+	c, err := readConfig(cfgPath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	edit(&c)
 	if err := os.MkdirAll(filepath.Dir(cfgPath), 0o755); err != nil {
-		return "", "", err
+		return err
 	}
-	b, _ := json.MarshalIndent(config{Root: abs}, "", "  ")
-	if err := os.WriteFile(cfgPath, append(b, '\n'), 0o644); err != nil {
-		return "", "", err
-	}
-	return records, cfgPath, nil
+	b, _ := json.MarshalIndent(c, "", "  ")
+	return os.WriteFile(cfgPath, append(b, '\n'), 0o644)
+}
+
+// RecordSkillDir remembers a skill folder fanear installed, so later
+// versions can keep it up to date.
+func RecordSkillDir(o Options, dir string) error {
+	return updateConfig(ConfigPath(o), func(c *config) {
+		for _, d := range c.Skills {
+			if d == dir {
+				return
+			}
+		}
+		c.Skills = append(c.Skills, dir)
+	})
+}
+
+// SkillDirs lists the skill folders recorded by RecordSkillDir.
+func SkillDirs(o Options) []string {
+	c, _ := readConfig(ConfigPath(o))
+	return c.Skills
 }
 
 func expandHome(p, home string) string {

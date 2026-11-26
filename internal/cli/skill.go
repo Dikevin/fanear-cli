@@ -3,10 +3,12 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 
+	"github.com/Dikevin/fanear-cli/internal/source"
 	"github.com/Dikevin/fanear-cli/skills"
 )
 
@@ -19,39 +21,71 @@ func cmdSkill(e Env, args []string) error {
 		return err
 	}
 	if len(pos) == 0 {
-		_, err := e.Stdout.Write([]byte(skills.FanearSkill))
+		_, err := io.WriteString(e.Stdout, skills.Fanear(skillPin()))
 		return err
 	}
-	if pos[0] != "install" || len(pos) > 1 {
-		return usageError{"用法：fanear skill install [--dir 目录] [--claude]"}
+	if pos[0] != "install" {
+		ue := usageError{fmt.Sprintf("skill 没有 %q 这个子命令", pos[0]), closest(pos[0], []string{"install"})}
+		if ue.suggestion == "" {
+			ue.msg += "，只有 install"
+		}
+		return ue
+	}
+	if len(pos) > 1 {
+		return usageError{msg: "用法：fanear skill install [--dir 目录] [--claude]"}
 	}
 	base := *dir
 	if base == "" {
 		base = filepath.Join(e.Home, ".agents", "skills")
 	}
-	target := filepath.Join(base, "fanear")
-	if err := os.MkdirAll(target, 0o755); err != nil {
+	target, err := filepath.Abs(filepath.Join(base, "fanear"))
+	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(target, "SKILL.md"), []byte(skills.FanearSkill), 0o644); err != nil {
+	if err := writeSkill(e, target); err != nil {
 		return err
 	}
-	fmt.Fprintf(e.Stdout, "已装好：%s\n", filepath.Join(target, "SKILL.md"))
+	fmt.Fprintf(e.Stdout, "已装好：%s（%s）\n", filepath.Join(target, "SKILL.md"), displayVersion())
+	if target != defaultSkillDir(e) {
+		// Remember it so later versions keep this copy current too.
+		opts := source.Options{Getenv: e.Getenv, Home: e.Home, GOOS: e.GOOS}
+		if err := source.RecordSkillDir(opts, target); err != nil {
+			fmt.Fprintf(e.Stderr, "fanear: 没能记下 %s，以后升级不会自动更新它：%v\n", target, err)
+		}
+	}
 	link := filepath.Join(e.Home, ".claude", "skills", "fanear")
 	if !*claude {
 		fmt.Fprintf(e.Stdout, "Claude Code 读 ~/.claude/skills；还没链接的话加 --claude，或自己运行：ln -s %s %s\n", target, link)
 		return nil
 	}
-	if cur, err := os.Readlink(link); err == nil {
+	fi, err := os.Lstat(link)
+	switch {
+	case err == nil && fi.Mode()&os.ModeSymlink != 0:
+		cur, _ := os.Readlink(link)
 		if cur == target {
 			fmt.Fprintf(e.Stdout, "Claude Code 的链接已经在：%s\n", link)
 			return nil
 		}
-		return fmt.Errorf("%s 已经指向 %s，没动它", link, cur)
-	} else if _, statErr := os.Lstat(link); statErr == nil {
-		return fmt.Errorf("%s 已经存在且不是链接，没动它", link)
-	} else if !errors.Is(statErr, fs.ErrNotExist) {
-		return statErr
+		if err := os.Remove(link); err != nil {
+			return err
+		}
+		if err := os.Symlink(target, link); err != nil {
+			return err
+		}
+		fmt.Fprintf(e.Stdout, "已把 Claude Code 的链接从 %s 改指向 %s\n", cur, target)
+		return nil
+	case err == nil:
+		if !readInstalled(link).Ours {
+			return fmt.Errorf("%s 已经存在，不是 fanear 的 skill，没动它", link)
+		}
+		// A copy (for example where links are not allowed): refresh it.
+		if err := writeSkill(e, link); err != nil {
+			return err
+		}
+		fmt.Fprintf(e.Stdout, "Claude Code 那边是一份副本，已更新：%s\n", link)
+		return nil
+	case !errors.Is(err, fs.ErrNotExist):
+		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		return err
@@ -61,4 +95,8 @@ func cmdSkill(e Env, args []string) error {
 	}
 	fmt.Fprintf(e.Stdout, "已给 Claude Code 建链接：%s → %s\n", link, target)
 	return nil
+}
+
+func defaultSkillDir(e Env) string {
+	return filepath.Join(e.Home, ".agents", "skills", "fanear")
 }

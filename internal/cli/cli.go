@@ -10,7 +10,6 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
@@ -60,14 +59,26 @@ func commands() []command {
 		{"memory", "小耳的记忆：关于你、人物和话题档案", cmdMemory},
 		{"favorites", "收藏的对话", cmdFavorites},
 		{"skill", "安装给 agent 用的 skill", cmdSkill},
+		{"doctor", "检查数据目录、记录、skill 装得对不对", cmdDoctor},
 		{"version", "版本", cmdVersion},
 	}
 }
 
 // usageError marks a mistake in how fanear was called (exit status 2).
-type usageError struct{ msg string }
+// suggestion is what the caller most likely meant, if anything is close.
+type usageError struct{ msg, suggestion string }
 
-func (u usageError) Error() string { return u.msg }
+func (u usageError) Error() string {
+	if u.suggestion != "" {
+		return fmt.Sprintf("%s，你是不是想输入 %s？", u.msg, u.suggestion)
+	}
+	return u.msg
+}
+
+// exitCode ends a command with a status after it has reported on its own.
+type exitCode int
+
+func (c exitCode) Error() string { return fmt.Sprintf("exit %d", int(c)) }
 
 // Run executes one fanear command and returns the exit status.
 func Run(args []string, e Env) int {
@@ -82,27 +93,64 @@ func Run(args []string, e Env) int {
 	if args[0] == "--version" || args[0] == "-v" {
 		args[0] = "version"
 	}
+	var names []string
 	for _, c := range commands() {
+		names = append(names, c.name)
 		if c.name != args[0] {
 			continue
 		}
-		err := c.run(e, args[1:])
-		switch {
-		case err == nil:
-			return 0
-		case errors.Is(err, flag.ErrHelp):
-			return 0
+		if c.name != "skill" {
+			syncSkills(e)
 		}
-		fmt.Fprintln(e.Stderr, "fanear:", err)
-		var ue usageError
-		if errors.As(err, &ue) {
-			return 2
-		}
-		return 1
+		return finish(e, args, c.run(e, args[1:]))
 	}
-	fmt.Fprintf(e.Stderr, "fanear: 没有 %q 这个命令\n\n", args[0])
-	printHelp(e.Stderr)
-	return 2
+	err := usageError{fmt.Sprintf("没有 %q 这个命令", args[0]), closest(args[0], names)}
+	if err.suggestion == "" {
+		err.msg += "；命令有：" + strings.Join(names, "、")
+	}
+	return finish(e, args, err)
+}
+
+// finish reports err the way the caller asked for (one line, or JSON with
+// --json) and turns it into an exit status: 1 for a failure, 2 for a
+// mistake in the command line.
+func finish(e Env, args []string, err error) int {
+	var code exitCode
+	switch {
+	case err == nil, errors.Is(err, flag.ErrHelp):
+		return 0
+	case errors.As(err, &code):
+		return int(code)
+	}
+	status := 1
+	var ue usageError
+	if errors.As(err, &ue) {
+		status = 2
+	}
+	if wantsJSON(args) {
+		msg := err.Error()
+		if status == 2 {
+			msg = ue.msg
+		}
+		writeJSON(e.Stderr, struct {
+			OK         bool   `json:"ok"`
+			Error      string `json:"error"`
+			Suggestion string `json:"suggestion,omitempty"`
+		}{false, msg, ue.suggestion})
+	} else {
+		fmt.Fprintln(e.Stderr, "fanear:", err)
+	}
+	return status
+}
+
+func wantsJSON(args []string) bool {
+	for _, a := range args {
+		switch a {
+		case "--json", "-json", "--json=true", "-json=true":
+			return true
+		}
+	}
+	return false
 }
 
 func printHelp(w io.Writer) {
@@ -147,8 +195,10 @@ func newFlags(e Env, name, usage string) *cmdFlags {
 }
 
 // parse accepts flags before, between and after positional arguments.
-// Help asked for with -h goes to stdout; usage after a mistake to stderr.
+// Help asked for with -h goes to stdout; mistakes come back as one-line
+// usage errors, with the closest flag name when one is near.
 func (f *cmdFlags) parse(args []string) ([]string, error) {
+	f.SetOutput(io.Discard)
 	for _, a := range args {
 		if a == "-h" || a == "--help" || a == "-help" {
 			f.SetOutput(f.stdout)
@@ -160,7 +210,7 @@ func (f *cmdFlags) parse(args []string) ([]string, error) {
 			if errors.Is(err, flag.ErrHelp) {
 				return nil, err
 			}
-			return nil, usageError{err.Error()}
+			return nil, f.explain(err)
 		}
 		rest := f.Args()
 		if len(rest) == 0 {
@@ -169,6 +219,27 @@ func (f *cmdFlags) parse(args []string) ([]string, error) {
 		pos = append(pos, rest[0])
 		args = rest[1:]
 	}
+}
+
+// explain rewords a flag package error for people and agents.
+func (f *cmdFlags) explain(err error) usageError {
+	msg := err.Error()
+	help := fmt.Sprintf("（fanear %s -h 看所有参数）", f.Name())
+	if name, ok := strings.CutPrefix(msg, "flag provided but not defined: -"); ok {
+		var defined []string
+		f.VisitAll(func(fl *flag.Flag) { defined = append(defined, fl.Name) })
+		ue := usageError{msg: fmt.Sprintf("没有 --%s 这个参数", name)}
+		if s := closest(name, defined); s != "" {
+			ue.suggestion = "--" + s
+		} else {
+			ue.msg += help
+		}
+		return ue
+	}
+	if name, ok := strings.CutPrefix(msg, "flag needs an argument: -"); ok {
+		return usageError{msg: fmt.Sprintf("--%s 后面要跟一个值%s", name, help)}
+	}
+	return usageError{msg: "参数不对：" + msg + help}
 }
 
 func (f *cmdFlags) locate(e Env) (source.Root, error) {
@@ -195,12 +266,12 @@ func (f *cmdFlags) openDays(e Env) (source.Root, []data.Day, error) {
 // latest day that satisfies has.
 func pickDay(e Env, days []data.Day, pos []string, has func(data.Files) bool) (data.Day, data.Files, error) {
 	if len(pos) > 1 {
-		return data.Day{}, data.Files{}, usageError{"只能给一个日期"}
+		return data.Day{}, data.Files{}, usageError{msg: "只能给一个日期"}
 	}
 	if len(pos) == 1 {
 		date, err := data.ParseDate(pos[0], e.Now())
 		if err != nil {
-			return data.Day{}, data.Files{}, usageError{err.Error()}
+			return data.Day{}, data.Files{}, usageError{msg: err.Error()}
 		}
 		d, err := data.FindDay(days, date)
 		if err != nil {
@@ -222,12 +293,12 @@ func dateRange(e Env, from, to string) (time.Time, time.Time, error) {
 	var err error
 	if from != "" {
 		if a, err = data.ParseDate(from, e.Now()); err != nil {
-			return a, b, usageError{err.Error()}
+			return a, b, usageError{msg: err.Error()}
 		}
 	}
 	if to != "" {
 		if b, err = data.ParseDate(to, e.Now()); err != nil {
-			return a, b, usageError{err.Error()}
+			return a, b, usageError{msg: err.Error()}
 		}
 	}
 	return a, b, nil
@@ -248,14 +319,7 @@ func newOut(w io.Writer) out { return out{bufio.NewWriter(w)} }
 func (o out) f(format string, a ...any) { fmt.Fprintf(o, format, a...) }
 
 func cmdVersion(e Env, args []string) error {
-	v := Version
-	if v == "" {
-		v = "(devel)"
-		if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" {
-			v = bi.Main.Version
-		}
-	}
-	fmt.Fprintln(e.Stdout, "fanear", v)
+	fmt.Fprintln(e.Stdout, "fanear", displayVersion())
 	return nil
 }
 
