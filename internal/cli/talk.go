@@ -84,12 +84,12 @@ func cmdTranscript(e Env, args []string) error {
 	var lo, hi time.Duration = -1, -1
 	if *from != "" {
 		if lo, err = data.ParseClock(*from); err != nil {
-			return usageError{err.Error()}
+			return usageError{msg: err.Error()}
 		}
 	}
 	if *to != "" {
 		if hi, err = data.ParseClock(*to); err != nil {
-			return usageError{err.Error()}
+			return usageError{msg: err.Error()}
 		}
 	}
 	_, days, err := f.openDays(e)
@@ -178,7 +178,7 @@ func cmdSearch(e Env, args []string) error {
 		return err
 	}
 	if len(kws) == 0 {
-		return usageError{"要给至少一个关键词，比如 fanear search 装修 报价"}
+		return usageError{msg: "要给至少一个关键词，比如 fanear search 装修 报价"}
 	}
 	a, b, err := dateRange(e, *from, *to)
 	if err != nil {

@@ -263,8 +263,8 @@ func TestUsage(t *testing.T) {
 	r = runWith(t, nil, "", "help", "search")
 	must(t, r, "用法：fanear search")
 	r = run(t, "days", "--bogus")
-	if !strings.Contains(r.stderr, "用法：fanear days") || r.stdout != "" {
-		t.Fatalf("usage after a mistake belongs on stderr: %q / %q", r.stdout, r.stderr)
+	if r.stderr != "fanear: 没有 --bogus 这个参数（fanear days -h 看所有参数）\n" || r.stdout != "" {
+		t.Fatalf("a mistake is one line on stderr: %q / %q", r.stdout, r.stderr)
 	}
 	must(t, runWith(t, nil, "", "version"), "fanear ")
 }
