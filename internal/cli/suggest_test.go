@@ -9,7 +9,7 @@ func TestClosest(t *testing.T) {
 	names := []string{"where", "days", "brief", "transcript", "search", "todos", "doctor"}
 	for word, want := range map[string]string{
 		"todo": "todos", "trnascript": "transcript", "tran": "transcript", "serch": "search",
-		"x": "", "zzzzzz": "", "": "",
+		"x": "", "zzzzzz": "", "": "", "do": "doctor", "to": "todos", "ab": "",
 	} {
 		if got := closest(word, names); got != want {
 			t.Errorf("closest(%q) = %q, want %q", word, got, want)
@@ -26,6 +26,7 @@ func TestSuggestions(t *testing.T) {
 		{[]string{"xyzzy"}, "fanear: 没有 \"xyzzy\" 这个命令；命令有：where、days、brief、transcript、search、todos、health、places、memory、favorites、skill、doctor、version\n"},
 		{[]string{"help", "serch"}, "fanear: 没有 \"serch\" 这个命令，你是不是想输入 search？\n"},
 		{[]string{"search", "装修", "--form", "11-24"}, "fanear: 没有 --form 这个参数，你是不是想输入 --from？\n"},
+		{[]string{"days", "-n"}, "fanear: 没有 --n 这个参数（fanear days -h 看所有参数）\n"},
 		{[]string{"days", "--from"}, "fanear: --from 后面要跟一个值（fanear days -h 看所有参数）\n"},
 		{[]string{"skill", "instal"}, "fanear: skill 没有 \"instal\" 这个子命令，你是不是想输入 install？\n"},
 	}

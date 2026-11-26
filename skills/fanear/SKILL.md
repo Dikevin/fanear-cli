@@ -9,7 +9,7 @@ description: 饭耳（FanEar）手表全天录音的记录。用户提到饭耳�
 
 ## 前提
 
-先跑 `fanear version` 确认装了。没装就运行 `GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@{{version}}`，再 `fanear skill install --claude`。数据找不到、skill 版本不对时先跑 `fanear doctor`。
+先跑 `fanear version` 确认装了。没装就运行 `GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest`，再 `fanear skill install --claude`。数据找不到、skill 版本不对时先跑 `fanear doctor`。
 
 ## 选命令
 

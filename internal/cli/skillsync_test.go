@@ -47,8 +47,9 @@ func markerVersion(t *testing.T, dir string) string {
 
 func TestSkillRender(t *testing.T) {
 	s := skills.Fanear("v0.2.0")
-	if !strings.Contains(s, "cmd/fanear@v0.2.0") || strings.Contains(s, "{{") {
-		t.Fatalf("version not rendered:\n%s", s)
+	pre, after, _ := strings.Cut(s, "## 选命令")
+	if !strings.Contains(pre, "cmd/fanear@v0.2.0") || !strings.Contains(after, "cmd/fanear@latest") || strings.Count(s, "@v0.2.0") != 1 {
+		t.Fatalf("only the 前提 install command should be pinned:\n%s", s)
 	}
 	if !strings.Contains(skills.Fanear(""), "cmd/fanear@latest") {
 		t.Fatal("development builds should point at @latest")
@@ -159,5 +160,31 @@ func TestSkillClaudeRelink(t *testing.T) {
 	writeFile(t, filepath.Join(home2, ".claude", "skills", "fanear", "SKILL.md"), "---\nname: mine\n---\n")
 	if r := runWith(t, nil, home2, "skill", "install", "--claude"); r.code != 1 || !strings.Contains(r.stderr, "不是 fanear 的 skill，没动它") {
 		t.Fatalf("exit %d %q", r.code, r.stderr)
+	}
+}
+
+func TestSkillSyncUnwritable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores permissions")
+	}
+	setVersion(t, "v0.2.0")
+	home := t.TempDir()
+	def := filepath.Join(home, ".agents", "skills", "fanear")
+	writeFile(t, filepath.Join(def, "SKILL.md"), "---\nname: fanear\n---\n")
+	writeFile(t, filepath.Join(def, markerFile), `{"tool":"fanear","version":"v0.1.0"}`)
+	for _, p := range []string{filepath.Join(def, "SKILL.md"), filepath.Join(def, markerFile)} {
+		if err := os.Chmod(p, 0o444); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Chmod(def, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(def, 0o755) })
+
+	r := runWith(t, nil, home, "days", "--root", sample)
+	must(t, r, "2026-11-24")
+	if strings.Count(r.stderr, "\n") != 1 || !strings.Contains(r.stderr, "没能把 ~/.agents/skills/fanear 的 skill 从 v0.1.0 更新到 v0.2.0") {
+		t.Fatalf("want one stderr line, got %q", r.stderr)
 	}
 }

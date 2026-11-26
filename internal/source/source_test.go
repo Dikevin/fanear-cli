@@ -97,3 +97,37 @@ func TestConfigPath(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestConfigKeepsRootAndSkills(t *testing.T) {
+	home := t.TempDir()
+	icloud := filepath.Join(home, "Library", "Mobile Documents", "iCloud~dev~fandao~fanear", "Documents", "记录")
+	mkday(t, icloud)
+	o := Options{Getenv: func(string) string { return "" }, Home: home, GOOS: "darwin"}
+
+	for _, d := range []string{"/a", "/a", "/b"} {
+		if err := RecordSkillDir(o, d); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := SkillDirs(o); len(got) != 2 || got[0] != "/a" || got[1] != "/b" {
+		t.Fatalf("SkillDirs = %v", got)
+	}
+	// A config holding only skill folders still auto-discovers the data.
+	if r, err := Locate(o); err != nil || r.Records != icloud || r.How != "自动发现：饭耳的 iCloud 目录" {
+		t.Fatalf("Locate = %+v, %v", r, err)
+	}
+	other := filepath.Join(t.TempDir(), "记录")
+	mkday(t, other)
+	if _, _, err := SaveRoot(o, other); err != nil {
+		t.Fatal(err)
+	}
+	if got := SkillDirs(o); len(got) != 2 {
+		t.Fatalf("SaveRoot dropped the skill folders: %v", got)
+	}
+	if err := RecordSkillDir(o, "/c"); err != nil {
+		t.Fatal(err)
+	}
+	if r, err := Locate(o); err != nil || r.Records != other {
+		t.Fatalf("RecordSkillDir dropped the root: %+v, %v", r, err)
+	}
+}

@@ -156,7 +156,9 @@ func syncSkills(e Env) {
 			from = "旧版"
 		}
 		if err := writeSkill(e, dir); err != nil {
-			fmt.Fprintf(e.Stderr, "fanear: 没能更新 %s 的 skill：%v\n", tilde(e, dir), err)
+			// Sandboxed agent shells often cannot write here; one run from a
+			// normal terminal fixes it.
+			fmt.Fprintf(e.Stderr, "fanear: 没能把 %s 的 skill 从 %s 更新到 %s（%v）；在终端里运行一次 fanear version 即可\n", tilde(e, dir), from, cur, err)
 			continue
 		}
 		fmt.Fprintf(e.Stderr, "fanear: 已把 %s 的 skill 从 %s 更新到 %s\n", tilde(e, dir), from, cur)

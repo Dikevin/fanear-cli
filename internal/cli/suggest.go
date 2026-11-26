@@ -6,7 +6,8 @@ import (
 
 // closest picks the candidate a mistyped word most likely meant: a unique
 // prefix match, otherwise the nearest by edit distance within a third of the
-// word's length (at least 2). It returns "" when nothing is close.
+// word's length (at least 2, and always fewer edits than the word has
+// letters, so -x does not become --to). It returns "" when nothing is close.
 func closest(word string, candidates []string) string {
 	if word == "" {
 		return ""
@@ -30,7 +31,7 @@ func closest(word string, candidates []string) string {
 	if limit < 2 {
 		limit = 2
 	}
-	if bestDist <= limit {
+	if bestDist <= limit && bestDist < len([]rune(word)) {
 		return best
 	}
 	return ""

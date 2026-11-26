@@ -7,17 +7,19 @@ import (
 	"strings"
 )
 
-// fanearSkill is skills/fanear/SKILL.md; {{version}} marks where the
-// install command pins the release that wrote it.
-//
 //go:embed fanear/SKILL.md
 var fanearSkill string
 
-// Fanear renders SKILL.md for a fanear version. Development builds, which
-// have no release to pin, point at @latest.
+// installRef is the install command in SKILL.md's 前提 section, its first
+// install command. The file says @latest so it stays usable as read on
+// GitHub; installed copies pin it to the release that wrote them.
+const installRef = "cmd/fanear@latest"
+
+// Fanear renders SKILL.md for a release such as v0.2.0; "" leaves @latest.
+// Later install commands (upgrading after a format change) keep @latest.
 func Fanear(version string) string {
 	if version == "" {
-		version = "latest"
+		return fanearSkill
 	}
-	return strings.ReplaceAll(fanearSkill, "{{version}}", version)
+	return strings.Replace(fanearSkill, installRef, "cmd/fanear@"+version, 1)
 }

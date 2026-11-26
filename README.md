@@ -4,7 +4,7 @@
 
 A read-only CLI (and agent skill) for the daily records the FanEar Apple Watch recorder writes to its save location.
 
-> 非官方工具，和饭耳开发者无关。只读本机文件，不联网，不改、不删、不挪任何文件。
+> 非官方工具，和饭耳开发者无关。只读饭耳的数据，不联网，不改、不删、不挪数据目录里的任何文件；只会写自己的配置和装好的 skill。
 
 ## 安装
 
