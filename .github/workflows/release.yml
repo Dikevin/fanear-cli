@@ -1,7 +1,7 @@
 name: release
 
 # Pushing a vX.Y.Z tag builds every platform, publishes a GitHub release and,
-# when HOMEBREW_TAP_TOKEN is set, updates the cask in Dikevin/homebrew-tap.
+# with the HOMEBREW_TAP_DEPLOY_KEY secret, updates the cask in Dikevin/homebrew-tap.
 on:
   push:
     tags: ["v*"]
@@ -26,9 +26,8 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-      # Without the tap token the cask is only generated; keep it so it can be
-      # committed to the tap by hand.
+          HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+      # Keep the generated cask, so a failed tap push can be fixed by hand.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
