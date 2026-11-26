@@ -98,7 +98,10 @@ func cmdTodos(e Env, args []string) error {
 				StateLabel: data.TodoStateLabel(r.TodoState, r.TodoDoneBasis),
 				Kind:       c.Kind, Counterparty: c.Counterparty, Summary: c.Summary,
 				Due: c.DueText, DueDate: dateOnly(c.DueDate), SaidAt: c.SourceRecordedAt,
-				Quote: c.Quote, QuoteSpeaker: rec.SpeakerAt(c.ChunkID, c.SourceRecordedAt), Note: c.Note, at: r.At,
+				Quote: c.Quote, Note: c.Note, at: r.At,
+			}
+			if s, ok := rec.QuoteSentence(c.ChunkID, c.SourceRecordedAt, c.Quote); ok {
+				t.QuoteSpeaker, t.SaidAt = s.SpeakerName, s.Start
 			}
 			if t.Summary == "" {
 				t.Summary = r.Title

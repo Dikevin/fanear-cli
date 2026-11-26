@@ -3,6 +3,7 @@ package data
 import (
 	"strings"
 	"time"
+	"unicode"
 )
 
 // DayRecord is 「M月D日 饭耳记录.json」 (schema_version 2). Only the fields
@@ -114,13 +115,18 @@ func TodoStateLabel(state string, basis *DoneBasis) string {
 	return state
 }
 
-// SpeakerAt finds who said the sentence starting at ts in the given chunk,
-// for naming who made a promise.
-func (r *DayRecord) SpeakerAt(chunkID, ts string) string {
+// QuoteSentence finds the sentence a todo quotes. FanEar stores the quote's
+// time truncated to the second, and someone else may have spoken a moment
+// earlier, so it prefers the sentence whose text matches the quote and only
+// then the one closest in time (within a few seconds, in the same chunk).
+func (r *DayRecord) QuoteSentence(chunkID, ts, quote string) (Sentence, bool) {
 	want, ok := ParseTS(ts)
 	if !ok {
-		return ""
+		return Sentence{}, false
 	}
+	q := normText(quote)
+	var best Sentence
+	bestScore, bestDist, found := 3, time.Duration(0), false
 	for _, c := range r.Day.Conversations {
 		for _, s := range c.Sentences {
 			if chunkID != "" && s.ChunkID != chunkID {
@@ -130,12 +136,38 @@ func (r *DayRecord) SpeakerAt(chunkID, ts string) string {
 			if !ok {
 				continue
 			}
-			if d := st.Sub(want); d > -1500*time.Millisecond && d < 1500*time.Millisecond {
-				return s.SpeakerName
+			dist := st.Sub(want)
+			if dist < 0 {
+				dist = -dist
+			}
+			if dist > 5*time.Second {
+				continue
+			}
+			t := normText(s.Text)
+			score := 2
+			switch {
+			case q != "" && t == q:
+				score = 0
+			case q != "" && t != "" && (strings.Contains(t, q) || strings.Contains(q, t)):
+				score = 1
+			}
+			if !found || score < bestScore || (score == bestScore && dist < bestDist) {
+				best, bestScore, bestDist, found = s, score, dist, true
 			}
 		}
 	}
-	return ""
+	return best, found
+}
+
+// normText drops punctuation and spaces so a quote matches its sentence.
+func normText(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			b.WriteRune(unicode.ToLower(r))
+		}
+	}
+	return b.String()
 }
 
 // Matches reports whether text contains any (or, with all, every) keyword,
