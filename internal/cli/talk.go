@@ -28,7 +28,7 @@ func toOut(date time.Time, c data.Conversation, s data.Sentence) sentenceOut {
 	return sentenceOut{
 		Date: data.FormatDate(date), Time: data.Clock(s.Start), Start: s.Start,
 		Speaker: s.SpeakerName, IsMe: s.IsMe, SpeakerInferred: s.SpeakerInferred, Highlighted: s.Highlighted,
-		Text: s.Text, ConversationID: c.ID, ConversationTitle: c.Title,
+		Text: s.DisplayText(), ConversationID: c.ID, ConversationTitle: c.Title,
 	}
 }
 
@@ -37,22 +37,27 @@ func sentenceLine(s data.Sentence) string {
 	if s.Highlighted {
 		star = "★ "
 	}
-	return fmt.Sprintf("%s[%s] %s：%s", star, data.Clock(s.Start), s.SpeakerName, s.Text)
+	if s.AsrLoop {
+		return fmt.Sprintf("%s[%s] %s", star, data.Clock(s.Start), s.DisplayText())
+	}
+	return fmt.Sprintf("%s[%s] %s：%s", star, data.Clock(s.Start), s.SpeakerName, s.DisplayText())
 }
 
 func convHeader(c data.Conversation) string {
 	return fmt.Sprintf("%s–%s %s", data.HM(c.Start), data.HM(c.End), c.Title)
 }
 
-// speakerFilter keeps sentences by me or by a named speaker.
+// speakerFilter keeps sentences by me or by a named speaker. FanEar marks
+// background sound (TV, videos) as noise with the speaker 「杂音」 and still
+// shows it in 饭耳记录.md, so it is kept unless asked otherwise.
 type speakerFilter struct {
-	me      bool
-	speaker string
-	noise   bool
+	me        bool
+	speaker   string
+	skipNoise bool
 }
 
 func (sf speakerFilter) keep(s data.Sentence) bool {
-	if s.Noise && !sf.noise {
+	if s.Noise && sf.skipNoise {
 		return false
 	}
 	if sf.me && !s.IsMe {
@@ -70,7 +75,7 @@ func cmdTranscript(e Env, args []string) error {
 	to := f.String("to", "", "到这个时刻止，如 15:30")
 	me := f.Bool("me", false, "只看我说的")
 	speaker := f.String("speaker", "", "只看名字里带这几个字的说话人")
-	noise := f.Bool("noise", false, "也显示饭耳标成噪声的句子")
+	noNoise := f.Bool("no-noise", false, "不显示饭耳标成「杂音」的背景声")
 	limit := f.Int("limit", 400, "最多输出多少句，0 表示不限")
 	pos, err := f.parse(args)
 	if err != nil {
@@ -102,7 +107,7 @@ func cmdTranscript(e Env, args []string) error {
 	if err := data.ReadJSON(files.Record, &rec); err != nil {
 		return err
 	}
-	sf := speakerFilter{me: *me, speaker: *speaker, noise: *noise}
+	sf := speakerFilter{me: *me, speaker: *speaker, skipNoise: *noNoise}
 	inWindow := func(s data.Sentence) bool {
 		t, ok := data.ParseTS(s.Start)
 		if !ok {
@@ -166,7 +171,7 @@ func cmdSearch(e Env, args []string) error {
 	me := f.Bool("me", false, "只搜我说的")
 	speaker := f.String("speaker", "", "只搜名字里带这几个字的说话人")
 	ctxN := f.Int("context", 0, "每个命中前后各带几句")
-	noise := f.Bool("noise", false, "也搜饭耳标成噪声的句子")
+	noNoise := f.Bool("no-noise", false, "不搜饭耳标成「杂音」的背景声")
 	limit := f.Int("limit", 100, "最多输出多少条命中，0 表示不限")
 	kws, err := f.parse(args)
 	if err != nil {
@@ -184,7 +189,7 @@ func cmdSearch(e Env, args []string) error {
 		return err
 	}
 	days = data.FilterDays(days, a, b)
-	sf := speakerFilter{me: *me, speaker: *speaker, noise: *noise}
+	sf := speakerFilter{me: *me, speaker: *speaker, skipNoise: *noNoise}
 	o := newOut(e.Stdout)
 	var js []sentenceOut
 	hits, shown := 0, 0
@@ -225,7 +230,7 @@ func cmdSearch(e Env, args []string) error {
 			for _, j := range idx {
 				match[j] = true
 				for k := j - *ctxN; k <= j+*ctxN; k++ {
-					if k >= 0 && k < len(c.Sentences) && (!c.Sentences[k].Noise || *noise) {
+					if k >= 0 && k < len(c.Sentences) && (!c.Sentences[k].Noise || !*noNoise) {
 						keep[k] = true
 					}
 				}

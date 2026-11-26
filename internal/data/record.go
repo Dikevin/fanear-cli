@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"strings"
 	"time"
 	"unicode"
@@ -40,7 +41,29 @@ type Sentence struct {
 	SpeakerInferred bool   `json:"speakerInferred"`
 	Highlighted     bool   `json:"highlighted"`
 	Noise           bool   `json:"noise"`
+	AsrLoop         bool   `json:"asrLoop"` // speech recognition got stuck repeating a phrase
 	ChunkID         string `json:"chunkID"`
+}
+
+// DisplayText is the sentence as 饭耳记录.md shows it: trimmed, and a stuck
+// recognition loop summarised as 「这里转文字卡住了，「X」重复了 N 次」.
+func (s Sentence) DisplayText() string {
+	t := strings.TrimSpace(s.Text)
+	if !s.AsrLoop {
+		return t
+	}
+	counts := map[string]int{}
+	best, n := "", 0
+	for _, part := range strings.FieldsFunc(t, func(r rune) bool { return strings.ContainsRune("，,、。 ", r) }) {
+		counts[part]++
+		if counts[part] > n {
+			best, n = part, counts[part]
+		}
+	}
+	if n < 3 {
+		return t
+	}
+	return fmt.Sprintf("这里转文字卡住了，「%s」重复了 %d 次", best, n)
 }
 
 // Record is one entry of day.records; kind is chunkSummaries, periodCards,

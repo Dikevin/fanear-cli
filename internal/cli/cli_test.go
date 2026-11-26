@@ -115,10 +115,12 @@ func TestBrief(t *testing.T) {
 
 func TestTranscript(t *testing.T) {
 	r := run(t, "transcript", "11-24", "--from", "10:00", "--to", "10:01")
-	must(t, r, "## 10:00–10:02 和张三聊装修", "[10:00:10] 张三：那你明天把报价单发给我。", "★ [10:00:20] 我：行，我明天发你。")
-	lacks(t, r, "嗡嗡嗡", "样板间", "中午吃面")
+	must(t, r, "## 10:00–10:02 和张三聊装修", "[10:00:10] 张三：那你明天把报价单发给我。", "★ [10:00:20] 我：行，我明天发你。",
+		"[10:00:30] 杂音：嗡嗡嗡") // 饭耳记录.md shows background sound too
+	lacks(t, r, "样板间", "中午吃面")
 
-	must(t, run(t, "transcript", "11-24", "--noise"), "嗡嗡嗡", "李四（推测）：我下周去看样板间。")
+	must(t, run(t, "transcript", "11-24"), "李四（推测）：我下周去看样板间。", "[12:30:20] 这里转文字卡住了，「还有」重复了 7 次")
+	lacks(t, run(t, "transcript", "11-24", "--no-noise"), "嗡嗡嗡")
 	r = run(t, "transcript", "11-24", "--me")
 	lacks(t, r, "张三：")
 	r = run(t, "transcript", "11-24", "--limit", "1")
@@ -141,7 +143,7 @@ func TestSearch(t *testing.T) {
 	if strings.Index(r.stdout, "11月25日") > strings.Index(r.stdout, "11月24日") {
 		t.Errorf("newest day should come first:\n%s", r.stdout)
 	}
-	r = run(t, "search", "报价", "样板间", "--from", "11-24", "--to", "11-24", "--context", "1", "--noise")
+	r = run(t, "search", "报价", "样板间", "--from", "11-24", "--to", "11-24", "--context", "1")
 	must(t, r, "→ [10:00:05]", "李四（推测）")
 	r = run(t, "search", "报价", "明天", "--and")
 	must(t, r, "（1 条命中）")
@@ -160,7 +162,7 @@ func TestTodos(t *testing.T) {
 		"> [10:00:20] 我：行，我明天发你。",
 		"做完的依据：[09:00:00] 报价单发你微信了。",
 		"事情：装修（等张三回复）",
-		"[已进待办] 下周去看样板间 · 李四（推测）答应的",
+		"[已进待办] 下周去看样板间 · 李四（推测） 答应我",
 		"[等你确认] 给王五回电话",
 		"（3 条）")
 	lacks(t, r, "中午吃面")

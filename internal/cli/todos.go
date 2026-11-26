@@ -175,13 +175,11 @@ func whoPromised(t todoOut) string {
 		}
 		return "我答应的"
 	}
-	if sp := t.QuoteSpeaker; sp != "" && !strings.HasPrefix(sp, "我") {
-		if last := sp[len(sp)-1]; last >= '0' && last <= '9' {
-			return sp + " 答应的"
-		}
-		return sp + "答应的"
+	// 饭耳记录.md writes these as 「倪汝冰 答应我」.
+	if t.QuoteSpeaker != "" {
+		return t.QuoteSpeaker + " 答应我"
 	}
-	return "别人答应的"
+	return "别人答应我"
 }
 
 func dueText(t todoOut) string {
