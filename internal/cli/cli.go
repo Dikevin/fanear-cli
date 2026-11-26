@@ -130,23 +130,30 @@ type cmdFlags struct {
 	*flag.FlagSet
 	root   *string
 	asJSON *bool
+	stdout io.Writer
 }
 
 func newFlags(e Env, name, usage string) *cmdFlags {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(e.Stderr)
-	f := &cmdFlags{FlagSet: fs}
+	f := &cmdFlags{FlagSet: fs, stdout: e.Stdout}
 	f.root = fs.String("root", "", "饭耳的保存位置（可以指到它上面任意一层）")
 	f.asJSON = fs.Bool("json", false, "输出 JSON")
 	fs.Usage = func() {
-		fmt.Fprintf(e.Stderr, "用法：fanear %s\n\n参数：\n", usage)
+		fmt.Fprintf(fs.Output(), "用法：fanear %s\n\n参数：\n", usage)
 		fs.PrintDefaults()
 	}
 	return f
 }
 
 // parse accepts flags before, between and after positional arguments.
+// Help asked for with -h goes to stdout; usage after a mistake to stderr.
 func (f *cmdFlags) parse(args []string) ([]string, error) {
+	for _, a := range args {
+		if a == "-h" || a == "--help" || a == "-help" {
+			f.SetOutput(f.stdout)
+		}
+	}
 	var pos []string
 	for {
 		if err := f.Parse(args); err != nil {

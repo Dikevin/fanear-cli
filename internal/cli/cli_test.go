@@ -257,8 +257,12 @@ func TestUsage(t *testing.T) {
 		t.Fatalf("want 2, got %d", r.code)
 	}
 	r = runWith(t, nil, "", "brief", "-h")
-	if r.code != 0 || !strings.Contains(r.stderr, "用法：fanear brief") {
-		t.Fatalf("want help, got %d %q", r.code, r.stderr)
+	must(t, r, "用法：fanear brief", "-json")
+	r = runWith(t, nil, "", "help", "search")
+	must(t, r, "用法：fanear search")
+	r = run(t, "days", "--bogus")
+	if !strings.Contains(r.stderr, "用法：fanear days") || r.stdout != "" {
+		t.Fatalf("usage after a mistake belongs on stderr: %q / %q", r.stdout, r.stderr)
 	}
 	must(t, runWith(t, nil, "", "version"), "fanear ")
 }
