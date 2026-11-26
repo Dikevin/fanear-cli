@@ -232,6 +232,7 @@ func TestMemoryAndFavorites(t *testing.T) {
 func TestSkill(t *testing.T) {
 	r := runWith(t, nil, "", "skill")
 	must(t, r, "name: fanear")
+	needsUnix(t)
 
 	home := t.TempDir()
 	r = runWith(t, nil, home, "skill", "install", "--claude")

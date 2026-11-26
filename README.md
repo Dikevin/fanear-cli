@@ -8,7 +8,17 @@ A read-only CLI (and agent skill) for the daily records the FanEar Apple Watch r
 
 ## 安装
 
-需要 Go 1.23 以上：
+macOS（Homebrew）：
+
+```bash
+brew install dikevin/tap/fanear
+```
+
+以后用 `brew upgrade fanear` 升级。
+
+Windows、Linux：到 [Releases](https://github.com/Dikevin/fanear-cli/releases) 下载对应系统和芯片的压缩包，解压后把 `fanear`（Windows 上是 `fanear.exe`）放进 PATH 里的任意目录。程序没有代码签名，Windows 第一次运行时如果弹出「Windows 已保护你的电脑」，点「更多信息」，再点「仍要运行」。
+
+也可以用 Go 1.23 以上自己编译：
 
 ```bash
 GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest
@@ -16,7 +26,7 @@ GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest
 
 `GOPROXY=direct` 直接从 GitHub 取最新的 tag；走公司或镜像代理时，`@latest` 可能拿到代理缓存的旧版本。
 
-给 agent 装 skill（写到 `~/.agents/skills/fanear`，Codex 和 Antigravity 读这里；`--claude` 再给 Claude Code 建个链接）：
+给 agent 装 skill（写到 `~/.agents/skills/fanear`，Codex 和 Antigravity 读这里；`--claude` 再给 Claude Code 建个链接，Windows 上是放一份副本）：
 
 ```bash
 fanear skill install --claude
@@ -34,12 +44,13 @@ fanear skill install --claude
 |---|---|
 | iCloud（默认） | 自动找到 |
 | 「文件」App 里选的文件夹 | 在 iCloud 云盘里的自动找到；其他的用 `--root` 指过去 |
-| Google Drive | 装 Google Drive 桌面版后自动找到（`~/Library/CloudStorage`） |
-| NAS（WebDAV、群晖、飞牛） | 在 Finder「连接服务器」挂上后自动找到（`/Volumes`），或用 rclone 挂载后 `--root` |
+| Google Drive | 装 Google Drive 桌面版后自动找到（macOS 在 `~/Library/CloudStorage`，Windows 在它的盘符下） |
+| NAS（WebDAV、群晖、飞牛） | macOS 在 Finder「连接服务器」挂上、Windows 映射成网络驱动器后自动找到，或用 rclone 挂载后 `--root` |
 | 对象存储（OSS、COS、TOS、S3、R2） | 用 rclone 等工具挂载或同步到本机后 `--root` |
+| 配对的电脑（饭耳 Windows 版） | 在那台电脑上自动找到（`%USERPROFILE%\饭耳`） |
 | Webhook | 不支持：饭耳是往外推，没有可读的文件 |
 
-找数据的顺序：`--root` 参数 → 环境变量 `FANEAR_ROOT` → `fanear where --set <目录>` 记住的目录 → 自动查找（只在 macOS 上）。`fanear where` 显示最后用的是哪个。
+找数据的顺序：`--root` 参数 → 环境变量 `FANEAR_ROOT` → `fanear where --set <目录>` 记住的目录 → 自动查找（macOS 和 Windows；Linux 上请用前面几种方式指定）。`fanear where` 显示最后用的是哪个。
 
 `memory` 和 `favorites` 读的是饭耳“换手机找回资料”的备份，只有 iCloud 和「文件」App 文件夹这两种保存位置有。
 

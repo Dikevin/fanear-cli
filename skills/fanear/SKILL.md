@@ -9,7 +9,7 @@ description: 饭耳（FanEar）手表全天录音的记录。用户提到饭耳�
 
 ## 前提
 
-先跑 `fanear version` 确认装了。没装就运行 `GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest`，再 `fanear skill install --claude`。数据找不到、skill 版本不对时先跑 `fanear doctor`。
+先跑 `fanear version` 确认装了。没装的话，macOS 上运行 `brew install dikevin/tap/fanear`；其他系统有 Go 就运行 `GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest`，没有 Go 就请用户从 https://github.com/Dikevin/fanear-cli/releases 下载。装好后运行 `fanear skill install --claude`。数据找不到、skill 版本不对时先跑 `fanear doctor`。
 
 ## 选命令
 
@@ -48,4 +48,4 @@ description: 饭耳（FanEar）手表全天录音的记录。用户提到饭耳�
 - 「没找到饭耳的数据目录」：问用户饭耳存在哪（饭耳 › 设置 › 存储），再 `fanear where --set <目录>`，指到它上面任意一层都行。NAS、对象存储要先挂载或同步到本机。
 - memory、favorites 说没有备份：Google Drive、NAS、对象存储这些保存位置没有饭耳的资料备份，改用其他命令。
 - 第一次读某天很慢：iCloud、网盘上的文件是读的时候才下载。
-- 「解析失败（饭耳可能改了格式）」：请用户升级 fanear：`GOPROXY=direct go install github.com/Dikevin/fanear-cli/cmd/fanear@latest`。
+- 「解析失败（饭耳可能改了格式）」：请用户升级 fanear，`fanear doctor` 会给出这台机器上的升级命令。

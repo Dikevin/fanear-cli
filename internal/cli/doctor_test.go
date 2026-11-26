@@ -11,6 +11,7 @@ import (
 )
 
 func TestDoctorHealthy(t *testing.T) {
+	needsUnix(t)
 	setVersion(t, "v0.2.0")
 	home := t.TempDir()
 	must(t, runWith(t, nil, home, "skill", "install", "--claude"))
@@ -27,6 +28,7 @@ func TestDoctorHealthy(t *testing.T) {
 }
 
 func TestDoctorProblems(t *testing.T) {
+	needsUnix(t)
 	setVersion(t, "v0.2.0")
 	home := t.TempDir()
 	// Claude Code is installed but its fanear link points at an unmanaged copy.

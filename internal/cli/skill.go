@@ -55,7 +55,7 @@ func cmdSkill(e Env, args []string) error {
 	}
 	link := filepath.Join(e.Home, ".claude", "skills", "fanear")
 	if !*claude {
-		fmt.Fprintf(e.Stdout, "Claude Code 读 ~/.claude/skills；还没链接的话加 --claude，或自己运行：ln -s %s %s\n", target, link)
+		fmt.Fprintf(e.Stdout, "Claude Code 读 ~/.claude/skills；还没装的话加 --claude\n")
 		return nil
 	}
 	fi, err := os.Lstat(link)
@@ -90,8 +90,14 @@ func cmdSkill(e Env, args []string) error {
 	if err := os.MkdirAll(filepath.Dir(link), 0o755); err != nil {
 		return err
 	}
-	if err := os.Symlink(target, link); err != nil {
-		return err
+	// Windows only allows links with developer mode or admin rights; a copy
+	// works everywhere and is kept current like any other installed copy.
+	if e.GOOS == "windows" || os.Symlink(target, link) != nil {
+		if err := writeSkill(e, link); err != nil {
+			return err
+		}
+		fmt.Fprintf(e.Stdout, "这个系统建不了链接，给 Claude Code 放了一份副本：%s（升级 fanear 后会自动更新）\n", link)
+		return nil
 	}
 	fmt.Fprintf(e.Stdout, "已给 Claude Code 建链接：%s → %s\n", link, target)
 	return nil
